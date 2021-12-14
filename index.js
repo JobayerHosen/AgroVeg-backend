@@ -45,6 +45,24 @@ async function run() {
       }
     });
 
+    // GET ALL USER
+    app.get("/users", async (req, res) => {
+      try {
+        const limit = parseInt(req.query?.limit);
+        const cursor = await userCollection.find({});
+        if (limit) cursor.limit(limit);
+        const users = await cursor.toArray();
+
+        if (users) {
+          res.json(users);
+        } else {
+          res.status(404).send("No User Found");
+        }
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
     // ADD USER
     app.post("/users", async (req, res) => {
       try {
