@@ -26,6 +26,7 @@ async function run() {
     const db = client.db("AgroVeg");
     const userCollection = db.collection("users");
     const productCollection = db.collection("products");
+    const orderCollection = db.collection("orders");
 
     //---------APIs------------------------------------------------------------------------------
 
@@ -173,6 +174,116 @@ async function run() {
           res.json(product);
         } else {
           res.status(404).send("No product Found");
+        }
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
+    //GET ALL ORDERS
+    app.get("/orders", async (req, res) => {
+      try {
+        const cursor = orderCollection.find({});
+        const orders = await cursor.toArray();
+
+        console.log(orders);
+        if (orders) {
+          res.json(orders);
+        } else {
+          res.status(404).send("No Order Found");
+        }
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
+    // ADD ORDER
+    app.post("/orders", async (req, res) => {
+      try {
+        const order = req.body;
+        if (!order?.uid) {
+          res.status(403).send("Invalid Input");
+        }
+
+        const result = await orderCollection.insertOne(order);
+        if (result.acknowledged) {
+          res.json(order);
+        } else {
+          res.status(500).send("Internal Server Error");
+        }
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
+    // GET ORDER BY ID
+    app.get("/orders/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        console.log(id);
+        const order = await orderCollection.findOne({ _id: ObjectId(id) });
+        console.log(order);
+
+        if (order?._id) {
+          res.json(order);
+        } else {
+          res.status(404).send("No Order Found");
+        }
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
+    // GET ORDERS BY USER
+    app.get("/orders/user/:uid", async (req, res) => {
+      try {
+        const id = req.params.uid;
+        console.log(id);
+        const cursor = await orderCollection.find({ uid: id });
+        const orders = await cursor.toArray();
+
+        if (orders) {
+          res.json(orders);
+        } else {
+          res.status(404).send("No Order Found");
+        }
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
+    // UPDATE ORDER INFO
+    app.put("/orders/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const order = req.body;
+
+        const filter = await orderCollection.findOne({ _id: ObjectId(id) });
+        const options = { upsert: true };
+        const updateDoc = { $set: order };
+
+        const result = await orderCollection.updateOne(filter, updateDoc, options);
+
+        if (result.acknowledged) res.json(order);
+        else throw new Error("Could Not Update");
+        //
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
+    //DELETE ORDER
+    app.delete("/orders/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: ObjectId(id) };
+
+        if (query) {
+          const result = await orderCollection.deleteOne(query);
+          console.log("deleted", result);
+          res.json(result);
+        } else {
+          res.status(404).send("No Order Found");
         }
       } catch (err) {
         res.status(500).send(`internal server error: ${err}`);
