@@ -25,6 +25,7 @@ async function run() {
     console.log("connected to db");
     const db = client.db("AgroVeg");
     const userCollection = db.collection("users");
+    const productCollection = db.collection("products");
 
     //---------APIs------------------------------------------------------------------------------
 
@@ -119,6 +120,59 @@ async function run() {
           }
         } else {
           res.status(403).json({ message: "Unauthorized" });
+        }
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
+    //GET ALL PRODUCTS
+    app.get("/products", async (req, res) => {
+      try {
+        const limit = parseInt(req.query?.limit);
+        console.log(limit);
+        const cursor = productCollection.find({});
+        if (limit) cursor.limit(limit);
+
+        const products = await cursor.toArray();
+        if (products) {
+          res.json(products);
+        } else {
+          res.status(404).send("No products Found");
+        }
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
+    //ADD PRODUCT
+    app.post("/products", async (req, res) => {
+      try {
+        const product = req.body;
+
+        if (!product?.title) {
+          res.status(404).send("invalid input");
+        }
+
+        const result = await productCollection.insertOne(product);
+        console.log(result);
+        if (result.acknowledged) res.json(product);
+        else throw new Error("Could Not add product");
+      } catch (err) {
+        res.status(500).send(`internal server error: ${err}`);
+      }
+    });
+
+    // GET SINGLE PRODUCT
+    app.get("/products/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const product = await productCollection.findOne({ _id: ObjectId(id) });
+
+        if (product?._id) {
+          res.json(product);
+        } else {
+          res.status(404).send("No product Found");
         }
       } catch (err) {
         res.status(500).send(`internal server error: ${err}`);
